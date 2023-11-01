@@ -1,0 +1,26 @@
+diff --git a/index.d.ts b/index.d.ts
+index aecbd042329d6eb4f520b86568d678efbc1b824c..a6fa8125853b52ffa58b0e23baa6c1af55884e07 100644
+--- a/index.d.ts
++++ b/index.d.ts
+@@ -989,8 +989,8 @@ declare module binaryen {
+     switch(labels: string[], defaultLabel: string, condition: ExpressionRef, value?: ExpressionRef): ExpressionRef;
+     call(name: string, operands: ExpressionRef[], returnType: Type): ExpressionRef;
+     return_call(name: string, operands: ExpressionRef[], returnType: Type): ExpressionRef;
+-    call_indirect(target: ExpressionRef, operands: ExpressionRef[], params: Type, results: Type): ExpressionRef;
+-    return_call_indirect(target: ExpressionRef, operands: ExpressionRef[], params: Type, results: Type): ExpressionRef;
++    call_indirect(table: string, target: ExpressionRef, operands: ExpressionRef[], params: Type, results: Type): ExpressionRef;
++    return_call_indirect(table: string, target: ExpressionRef, operands: ExpressionRef[], params: Type, results: Type): ExpressionRef;
+     local: {
+       get(index: number, type: Type): ExpressionRef;
+       set(index: number, value: ExpressionRef): ExpressionRef;
+@@ -1635,8 +1635,8 @@ declare module binaryen {
+     removeTag(name: string): void;
+     addFunctionImport(internalName: string, externalModuleName: string, externalBaseName: string, params: Type, results: Type): void;
+     addTableImport(internalName: string, externalModuleName: string, externalBaseName: string): void;
+-    addMemoryImport(internalName: string, externalModuleName: string, externalBaseName: string): void;
+-    addGlobalImport(internalName: string, externalModuleName: string, externalBaseName: string, globalType: Type): void;
++    addMemoryImport(internalName: string, externalModuleName: string, externalBaseName: string, shared: boolean): void;
++    addGlobalImport(internalName: string, externalModuleName: string, externalBaseName: string, globalType: Type, mutable: boolean): void;
+     addTagImport(internalName: string, externalModuleName: string, externalBaseName: string, params: Type, results: Type): void;
+     addFunctionExport(internalName: string, externalName: string): ExportRef;
+     addTableExport(internalName: string, externalName: string): ExportRef;

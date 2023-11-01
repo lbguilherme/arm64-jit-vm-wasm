@@ -1,5 +1,5 @@
 import { Cpu } from "./cpu.js";
-import { decoder } from "./decoder.js";
+import { decodeInstruction } from "./decoder.js";
 import binaryen from "binaryen";
 
 export interface CompilerCtx {
@@ -7,7 +7,7 @@ export interface CompilerCtx {
   pc: number,
   builder: binaryen.Module;
   emit(code: binaryen.ExpressionRef): void;
-  branch(toPc: number, condition?: binaryen.ExpressionRef, code?: binaryen.ExpressionRef): void;
+  branch(toPc: number, condition?: binaryen.ExpressionRef): void;
   getFuncIndex(pc: number): number;
   allocLocal(type: binaryen.Type): number;
   freeLocal(id: number): void;
@@ -47,13 +47,14 @@ export class Compiler {
   }
 
   compileFunction(entry: number): () => void {
+    const timeStart = performance.now();
     const funcName = `pc_${entry.toString(16)}`;
     let funcIndex = this.mappingAddressToFuncIndex.get(entry) ?? this.#allocNewFuncIndex();
 
     this.mappingAddressToFuncIndex.set(entry, funcIndex);
 
     const builder = new binaryen.Module();
-    builder.addMemoryImport("memory", "env", "memory");
+    builder.addMemoryImport("memory", "env", "memory", true);
     builder.addTableImport("funcTable", "env", "funcTable");
 
     const relooper = new binaryen.Relooper(builder);
@@ -63,6 +64,7 @@ export class Compiler {
     const branches: { fromPc: number, toPc: number, condition?: binaryen.ExpressionRef, code?: binaryen.ExpressionRef }[] = [];
     const locals: binaryen.Type[] = [binaryen.i32];
     const freeLocals = new Set<number>();
+    const reservedLocals = new Set<number>([0]);
 
     while (pendingPcs.length) {
       const blockStartPc = pendingPcs.pop()!;
@@ -70,10 +72,8 @@ export class Compiler {
         continue;
       }
 
-      console.log("Block at", blockStartPc.toString(16));
-
       const body: binaryen.ExpressionRef[] = [];
-      let stop = false;
+      let hasBranched = false;
 
       const ctx: CompilerCtx = {
         cpu: this.#cpu,
@@ -82,12 +82,20 @@ export class Compiler {
         emit(code) {
           body.push(code);
         },
-        branch(toPc, condition, code) {
-          branches.push({ fromPc: blockStartPc, toPc, condition, code });
-          if (!pcToCfg.has(toPc)) {
-            pendingPcs.push(toPc);
+        branch(toPc, condition) {
+          if (hasBranched) {
+            throw new Error("Can't branch twice");
           }
-          stop = true;
+          if (condition) {
+            console.log(`\t(conditional branch to ${toPc.toString(16)})`);
+          }
+          branches.push({ fromPc: blockStartPc, toPc, condition });
+          pendingPcs.push(toPc);
+          if (condition) {
+            branches.push({ fromPc: blockStartPc, toPc: ctx.pc + 4 });
+            pendingPcs.push(ctx.pc + 4);
+          }
+          hasBranched = true;
         },
         getFuncIndex: (funcPc) => {
           const existingIndex = this.mappingAddressToFuncIndex.get(funcPc);
@@ -118,23 +126,32 @@ export class Compiler {
           if (freeLocals.has(id)) {
             throw new Error("Local already freed");
           }
+          if (reservedLocals.has(id)) {
+            throw new Error("Can't free reserved local");
+          }
           freeLocals.add(id);
         },
       };
 
-      while (!stop) {
-        const op = this.#cpu.memory.get32Aligned(ctx.pc);
-        decoder(op, (instruction, args) => {
-          console.log(`${ctx.pc.toString(16).padStart(8, " ")}: ${op.toString(16).padStart(8, "0")}      ${instruction?.asm(args) ?? "???"}`);
-          if (!instruction?.jit) {
-            console.log("TODO: JIT");
-            stop = true;
-            return;
-          }
+      const op = this.#cpu.memory.get32Aligned(ctx.pc);
+      decodeInstruction(op, (instruction, args) => {
+        console.log(`${ctx.pc.toString(16).padStart(8, " ")}: ${op.toString(16).padStart(8, "0")}      ${instruction?.asm(args) ?? "???"}`);
+        if (!instruction?.jit) {
+          console.log("TODO: JIT");
+          hasBranched = true;
+          return;
+        }
 
-          instruction.jit(ctx, args);
-        });
-        ctx.pc += 4;
+        instruction.jit(ctx, args);
+      });
+
+      if (freeLocals.size + reservedLocals.size !== locals.length) {
+        throw new Error("Unfreed locals");
+      }
+
+      if (!hasBranched) {
+        branches.push({ fromPc: blockStartPc, toPc: ctx.pc + 4 });
+        pendingPcs.push(ctx.pc + 4);
       }
 
       const block = relooper.addBlock(builder.block(null, body));
@@ -149,19 +166,22 @@ export class Compiler {
       }
       relooper.addBranch(fromCfg, toCfg, branch.condition as number, branch.code as number);
     }
+    const timeCodegen = performance.now();
 
     const finalExpr = relooper.renderAndDispose(pcToCfg.get(entry)!, 0);
-
-    freeLocals.add(0);
-
-    if (freeLocals.size !== locals.length) {
-      throw new Error("Unfreed locals");
-    }
 
     builder.addFunction(funcName, binaryen.none, binaryen.none, locals, finalExpr);
     builder.addFunctionExport(funcName, funcName);
 
-    // builder.optimize();
+    const timeRender = performance.now();
+
+    builder.optimize();
+
+    const timeFinal = performance.now();
+
+    console.log(`Codegen: ${timeCodegen - timeStart}ms`);
+    console.log(`Render: ${timeRender - timeCodegen}ms`);
+    console.log(`Optimize: ${timeFinal - timeRender}ms`);
 
     console.log(builder.emitText());
 

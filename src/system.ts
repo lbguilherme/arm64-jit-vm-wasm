@@ -69,7 +69,7 @@ export class ArmSystem {
 
   constructor(config: Config) {
     this.#config = config;
-    this.#memory = new Memory(new WebAssembly.Memory({ initial: 1024, maximum: config.memory.maxSizeMb * 1024 / 64 }));
+    this.#memory = new Memory(new WebAssembly.Memory({ initial: 1024, maximum: config.memory.maxSizeMb * 1024 / 64, shared: true }));
     this.#cpu = new Cpu(this.#memory, 1024);
 
     // copy linux image to memory

@@ -42,10 +42,10 @@ function createDecoder() {
   ) => func(op, instructions, action);
 }
 
-export const decoder = createDecoder();
+export const decodeInstruction = createDecoder();
 
 export function decodeToAsm(op: number) {
-  return decoder(op, (instruction, args) => instruction?.asm(args));
+  return decodeInstruction(op, (instruction, args) => instruction?.asm(args));
 }
 
 // export const decodeAndInterpret = (op: number, cpu: Cpu) => decoder(op, instructions, instruction => (...args) => instruction.interpret(cpu, ...args));

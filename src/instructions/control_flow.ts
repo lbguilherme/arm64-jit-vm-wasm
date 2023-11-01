@@ -1,5 +1,74 @@
 import binaryen from "binaryen";
 import { defineInstruction, immToString } from "./base.js";
+import { CompilerCtx } from "../compiler.js";
+
+export function condName(cond: number) {
+  switch (cond) {
+    case 0b0000: return "eq";
+    case 0b0001: return "ne";
+    case 0b0010: return "cs";
+    case 0b0011: return "cc";
+    case 0b0100: return "mi";
+    case 0b0101: return "pl";
+    case 0b0110: return "vs";
+    case 0b0111: return "vc";
+    case 0b1000: return "hi";
+    case 0b1001: return "ls";
+    case 0b1010: return "ge";
+    case 0b1011: return "lt";
+    case 0b1100: return "gt";
+    case 0b1101: return "le";
+    case 0b1110: return "al";
+    case 0b1111: return "al";
+  }
+  throw new Error("Invalid condition: 0b" + cond.toString(2));
+}
+
+export function condEval(ctx: CompilerCtx, cond: number) {
+  switch (cond) {
+    case 0b0000: return ctx.cpu.loadPstateZ(ctx.builder);
+    case 0b0001: return ctx.builder.i32.eqz(ctx.cpu.loadPstateZ(ctx.builder));
+    case 0b0010: return ctx.cpu.loadPstateC(ctx.builder);
+    case 0b0011: return ctx.builder.i32.eqz(ctx.cpu.loadPstateC(ctx.builder));
+    case 0b0100: return ctx.cpu.loadPstateN(ctx.builder);
+    case 0b0101: return ctx.builder.i32.eqz(ctx.cpu.loadPstateN(ctx.builder));
+    case 0b0110: return ctx.cpu.loadPstateV(ctx.builder);
+    case 0b0111: return ctx.builder.i32.eqz(ctx.cpu.loadPstateV(ctx.builder));
+    case 0b1000: return ctx.builder.i32.and(
+      ctx.cpu.loadPstateC(ctx.builder),
+      ctx.builder.i32.eqz(ctx.cpu.loadPstateZ(ctx.builder))
+    );
+    case 0b1001: return ctx.builder.i32.or(
+      ctx.builder.i32.eqz(ctx.cpu.loadPstateC(ctx.builder)),
+      ctx.cpu.loadPstateZ(ctx.builder)
+    );
+    case 0b1010: return ctx.builder.i32.eq(
+      ctx.cpu.loadPstateN(ctx.builder),
+      ctx.cpu.loadPstateV(ctx.builder)
+    );
+    case 0b1011: return ctx.builder.i32.ne(
+      ctx.cpu.loadPstateN(ctx.builder),
+      ctx.cpu.loadPstateV(ctx.builder)
+    );
+    case 0b1100: return ctx.builder.i32.and(
+      ctx.builder.i32.eqz(ctx.cpu.loadPstateZ(ctx.builder)),
+      ctx.builder.i32.eq(
+        ctx.cpu.loadPstateN(ctx.builder),
+        ctx.cpu.loadPstateV(ctx.builder)
+      )
+    );
+    case 0b1101: return ctx.builder.i32.or(
+      ctx.builder.i32.ne(
+        ctx.cpu.loadPstateN(ctx.builder),
+        ctx.cpu.loadPstateV(ctx.builder)
+      ),
+      ctx.cpu.loadPstateZ(ctx.builder)
+    );
+    case 0b1110: return ctx.builder.i32.const(1);
+    case 0b1111: return ctx.builder.i32.const(1);
+  }
+  throw new Error("Invalid condition: 0b" + cond.toString(2));
+}
 
 defineInstruction({
   name: "Nop",
@@ -32,7 +101,7 @@ defineInstruction({
       ctx.cpu.storeX(ctx.builder, 30, ctx.builder.i64.const(ctx.pc + 4, 0))
     );
     ctx.emit(
-      (ctx.builder.call_indirect as any)(
+      ctx.builder.call_indirect(
         "funcTable",
         ctx.builder.i32.const(funcIndex),
         [],
@@ -41,4 +110,34 @@ defineInstruction({
       )
     );
   },
+});
+
+defineInstruction({
+  name: "Branch condition",
+  pattern: [0, 1, 0, 1, 0, 1, 0, 0, ["imm19", 19], 0, ["cond", 4]],
+  asm({imm19, cond}) {
+    return `b.${condName(cond)} ${immToString((imm19 * 4) + 4)}`;
+  },
+  jit(ctx, {imm19, cond}) {
+    ctx.branch(ctx.pc + imm19 * 4, condEval(ctx, cond));
+  }
+});
+
+defineInstruction({
+  name: "Test bit",
+  pattern: [["b5", 1], 0, 1, 1, 0, 1, 1, ["op", 1], ["b40", 5], ["imm14", 14], ["Rt", 5]],
+  asm({b5, op, b40, imm14, Rt}) {
+    return `${op ? "tbnz" : "tbz"} ${b5 ? "x" : "w"}${Rt}, ${immToString(b5 * 32 + b40)}, ${immToString(imm14 * 4)}`;
+  },
+  jit(ctx, {b5, op, b40, imm14, Rt}) {
+    const cond = ctx.builder.i32.and(
+      ctx.cpu.loadX(ctx.builder, Rt),
+      b5 ? ctx.builder.i64.const(0, 1 << b40) : ctx.builder.i64.const(1 << b40, 0)
+    );
+
+    ctx.branch(
+      ctx.pc + imm14 * 4,
+      op ? ctx.builder.i32.eqz(cond) : cond,
+    );
+  }
 });

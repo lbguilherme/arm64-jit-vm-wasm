@@ -11,12 +11,17 @@
   "author": "",
   "license": "ISC",
   "devDependencies": {
-    "@types/node": "^20.8.9",
+    "@types/node": "^20.8.10",
     "ts-node": "^10.9.1",
     "typescript": "^5.2.2"
   },
   "dependencies": {
     "binaryen": "^116.0.0",
     "webasmjs": "^0.0.3"
+  },
+  "pnpm": {
+    "patchedDependencies": {
+      "binaryen@116.0.0": "patches/binaryen@116.0.0.patch"
+    }
   }
 }

@@ -17,6 +17,21 @@ systemRegisters[0b11_000_0100_0010_010] = {
   }
 };
 
+systemRegisters[0b11_000_0001_0000_000] = {
+  name: "SCTLR_EL1",
+  load(ctx) {
+    // TODO
+    return ctx.builder.i64.const(0, 0);
+  }
+};
+
+systemRegisters[0b11_100_0001_0000_000] = {
+  name: "SCTLR_EL2",
+  load(ctx) {
+    // TODO
+    return ctx.builder.i64.const(0, 0);
+  }
+};
 
 defineInstruction({
   name: "MSR",

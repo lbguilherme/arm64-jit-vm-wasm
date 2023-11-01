@@ -1,19 +1,19 @@
 import binaryen from "binaryen";
-import { condName, defineInstruction, immToString } from "./base.js";
+import { defineInstruction, immToString } from "./base.js";
 import { CompilerCtx } from "../compiler.js";
+import { condName } from "./control_flow.js";
 
 function add64(ctx: CompilerCtx, operand1: binaryen.ExpressionRef, operand2: binaryen.ExpressionRef) {
   const resultLocal = ctx.allocLocal(binaryen.i64);
-  const result = ctx.builder.local.get(resultLocal, binaryen.i64);
 
   ctx.emit(ctx.builder.local.set(resultLocal, ctx.builder.i64.add(operand1, operand2)));
 
-  const n = ctx.builder.i64.lt_s(result, ctx.builder.i64.const(0, 0));
-  const z = ctx.builder.i64.eq(result, ctx.builder.i64.const(0, 0));
-  const c = ctx.builder.i64.lt_u(result, operand1); // unsigned overflow
+  const n = ctx.builder.i64.lt_s(ctx.builder.local.get(resultLocal, binaryen.i64), ctx.builder.i64.const(0, 0));
+  const z = ctx.builder.i64.eq(ctx.builder.local.get(resultLocal, binaryen.i64), ctx.builder.i64.const(0, 0));
+  const c = ctx.builder.i64.lt_u(ctx.builder.local.get(resultLocal, binaryen.i64), operand1); // unsigned overflow
   const v = ctx.builder.i32.xor(
     ctx.builder.i64.lt_s(operand2, ctx.builder.i64.const(0, 0)),
-    ctx.builder.i64.lt_s(result, operand1)
+    ctx.builder.i64.lt_s(ctx.builder.local.get(resultLocal, binaryen.i64), operand1)
   ); // signed overflow
 
   ctx.emit(ctx.cpu.storePstateN(ctx.builder, n));
