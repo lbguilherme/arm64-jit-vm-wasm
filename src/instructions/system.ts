@@ -11,7 +11,7 @@ systemRegisters[0b11_000_0100_0010_010] = {
   name: "CurrentEL",
   load(ctx) {
     return ctx.builder.i64.shl(
-      ctx.builder.i64.extend_u(ctx.cpu.loadPstateEl(ctx.builder)),
+      ctx.builder.i64.extend_u(ctx.builder.global.get("pstate.el", binaryen.i32)),
       ctx.builder.i64.const(2, 0)
     );
   }
@@ -45,10 +45,7 @@ defineInstruction({
     const systemRegister = systemRegisters[Rsys];
 
     if (systemRegister?.load) {
-      ctx.emit(
-        ctx.cpu.storeX(ctx.builder, Rt, systemRegister.load(ctx))
-      );
-      return;
+      return ctx.builder.global.set(`x${Rt}`, systemRegister.load(ctx));
     }
   },
 });

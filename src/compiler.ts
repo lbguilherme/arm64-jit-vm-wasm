@@ -6,11 +6,9 @@ export interface CompilerCtx {
   cpu: Cpu,
   pc: number,
   builder: binaryen.Module;
-  emit(code: binaryen.ExpressionRef): void;
   branch(toPc: number, condition?: binaryen.ExpressionRef): void;
   getFuncIndex(pc: number): number;
   allocLocal(type: binaryen.Type): number;
-  freeLocal(id: number): void;
 }
 
 export class Compiler {
@@ -57,6 +55,8 @@ export class Compiler {
     builder.addMemoryImport("memory", "env", "memory", true);
     builder.addTableImport("funcTable", "env", "funcTable");
 
+    this.#cpu.importRegisters(builder);
+
     const relooper = new binaryen.Relooper(builder);
 
     const pcToCfg = new Map<number, binaryen.RelooperBlockRef>();
@@ -79,9 +79,6 @@ export class Compiler {
         cpu: this.#cpu,
         pc: blockStartPc,
         builder,
-        emit(code) {
-          body.push(code);
-        },
         branch(toPc, condition) {
           if (hasBranched) {
             throw new Error("Can't branch twice");
@@ -122,15 +119,6 @@ export class Compiler {
           locals.push(type);
           return id;
         },
-        freeLocal(id) {
-          if (freeLocals.has(id)) {
-            throw new Error("Local already freed");
-          }
-          if (reservedLocals.has(id)) {
-            throw new Error("Can't free reserved local");
-          }
-          freeLocals.add(id);
-        },
       };
 
       const op = this.#cpu.memory.get32Aligned(ctx.pc);
@@ -142,11 +130,20 @@ export class Compiler {
           return;
         }
 
-        instruction.jit(ctx, args);
+        const code = instruction.jit(ctx, args);
+
+        if (typeof code === "number") {
+          body.push(code);
+        } else if (Array.isArray(code)) {
+          body.push(...code);
+        }
       });
 
-      if (freeLocals.size + reservedLocals.size !== locals.length) {
-        throw new Error("Unfreed locals");
+      for (let i = 0; i < locals.length; ++i) {
+        if (reservedLocals.has(i)) {
+          continue;
+        }
+        freeLocals.add(i);
       }
 
       if (!hasBranched) {
@@ -190,7 +187,8 @@ export class Compiler {
       env: {
         memory: this.#cpu.memory.wasmMemory,
         funcTable: this.funcTable
-      }
+      },
+      registers: this.#cpu.registers as unknown as Record<string, WebAssembly.Global>,
     });
 
     const func = instance.exports[funcName] as () => void;

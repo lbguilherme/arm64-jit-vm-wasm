@@ -26,43 +26,43 @@ export function condName(cond: number) {
 
 export function condEval(ctx: CompilerCtx, cond: number) {
   switch (cond) {
-    case 0b0000: return ctx.cpu.loadPstateZ(ctx.builder);
-    case 0b0001: return ctx.builder.i32.eqz(ctx.cpu.loadPstateZ(ctx.builder));
-    case 0b0010: return ctx.cpu.loadPstateC(ctx.builder);
-    case 0b0011: return ctx.builder.i32.eqz(ctx.cpu.loadPstateC(ctx.builder));
-    case 0b0100: return ctx.cpu.loadPstateN(ctx.builder);
-    case 0b0101: return ctx.builder.i32.eqz(ctx.cpu.loadPstateN(ctx.builder));
-    case 0b0110: return ctx.cpu.loadPstateV(ctx.builder);
-    case 0b0111: return ctx.builder.i32.eqz(ctx.cpu.loadPstateV(ctx.builder));
+    case 0b0000: return ctx.builder.global.get("pstate.z", binaryen.i32);
+    case 0b0001: return ctx.builder.i32.eqz(ctx.builder.global.get("pstate.z", binaryen.i32));
+    case 0b0010: return ctx.builder.global.get("pstate.c", binaryen.i32);
+    case 0b0011: return ctx.builder.i32.eqz(ctx.builder.global.get("pstate.c", binaryen.i32));
+    case 0b0100: return ctx.builder.global.get("pstate.n", binaryen.i32);
+    case 0b0101: return ctx.builder.i32.eqz(ctx.builder.global.get("pstate.n", binaryen.i32));
+    case 0b0110: return ctx.builder.global.get("pstate.v", binaryen.i32);
+    case 0b0111: return ctx.builder.i32.eqz(ctx.builder.global.get("pstate.v", binaryen.i32));
     case 0b1000: return ctx.builder.i32.and(
-      ctx.cpu.loadPstateC(ctx.builder),
-      ctx.builder.i32.eqz(ctx.cpu.loadPstateZ(ctx.builder))
+      ctx.builder.global.get("pstate.c", binaryen.i32),
+      ctx.builder.i32.eqz(ctx.builder.global.get("pstate.z", binaryen.i32))
     );
     case 0b1001: return ctx.builder.i32.or(
-      ctx.builder.i32.eqz(ctx.cpu.loadPstateC(ctx.builder)),
-      ctx.cpu.loadPstateZ(ctx.builder)
+      ctx.builder.i32.eqz(ctx.builder.global.get("pstate.c", binaryen.i32)),
+      ctx.builder.global.get("pstate.z", binaryen.i32)
     );
     case 0b1010: return ctx.builder.i32.eq(
-      ctx.cpu.loadPstateN(ctx.builder),
-      ctx.cpu.loadPstateV(ctx.builder)
+      ctx.builder.global.get("pstate.n", binaryen.i32),
+      ctx.builder.global.get("pstate.v", binaryen.i32)
     );
     case 0b1011: return ctx.builder.i32.ne(
-      ctx.cpu.loadPstateN(ctx.builder),
-      ctx.cpu.loadPstateV(ctx.builder)
+      ctx.builder.global.get("pstate.n", binaryen.i32),
+      ctx.builder.global.get("pstate.v", binaryen.i32)
     );
     case 0b1100: return ctx.builder.i32.and(
-      ctx.builder.i32.eqz(ctx.cpu.loadPstateZ(ctx.builder)),
+      ctx.builder.i32.eqz(ctx.builder.global.get("pstate.z", binaryen.i32)),
       ctx.builder.i32.eq(
-        ctx.cpu.loadPstateN(ctx.builder),
-        ctx.cpu.loadPstateV(ctx.builder)
+        ctx.builder.global.get("pstate.n", binaryen.i32),
+        ctx.builder.global.get("pstate.v", binaryen.i32)
       )
     );
     case 0b1101: return ctx.builder.i32.or(
       ctx.builder.i32.ne(
-        ctx.cpu.loadPstateN(ctx.builder),
-        ctx.cpu.loadPstateV(ctx.builder)
+        ctx.builder.global.get("pstate.n", binaryen.i32),
+        ctx.builder.global.get("pstate.v", binaryen.i32)
       ),
-      ctx.cpu.loadPstateZ(ctx.builder)
+      ctx.builder.global.get("pstate.z", binaryen.i32)
     );
     case 0b1110: return ctx.builder.i32.const(1);
     case 0b1111: return ctx.builder.i32.const(1);
@@ -97,10 +97,9 @@ defineInstruction({
   },
   jit(ctx, {imm26}) {
     const funcIndex = ctx.getFuncIndex(ctx.pc + imm26 * 4);
-    ctx.emit(
-      ctx.cpu.storeX(ctx.builder, 30, ctx.builder.i64.const(ctx.pc + 4, 0))
-    );
-    ctx.emit(
+
+    return [
+      ctx.builder.global.set("x30", ctx.builder.i64.const(ctx.pc + 4, 0)),
       ctx.builder.call_indirect(
         "funcTable",
         ctx.builder.i32.const(funcIndex),
@@ -108,7 +107,7 @@ defineInstruction({
         binaryen.none,
         binaryen.none
       )
-    );
+    ];
   },
 });
 
@@ -131,7 +130,7 @@ defineInstruction({
   },
   jit(ctx, {b5, op, b40, imm14, Rt}) {
     const cond = ctx.builder.i32.and(
-      ctx.cpu.loadX(ctx.builder, Rt),
+      ctx.builder.global.get(`x${Rt}`, binaryen.i64),
       b5 ? ctx.builder.i64.const(0, 1 << b40) : ctx.builder.i64.const(1 << b40, 0)
     );
 

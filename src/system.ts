@@ -78,8 +78,8 @@ export class ArmSystem {
 
     this.#cpu.execute(2 * 1024 * 1024);
 
-    console.log(this.#cpu.registers.x19);
-    console.log(this.#cpu.registers.x30);
+    console.log(this.#cpu.registers.x19.value);
+    console.log(this.#cpu.registers.x30.value);
 
   }
 }

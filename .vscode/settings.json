@@ -1,0 +1,15 @@
+{
+  "nodejs-testing.extensions": [
+    {
+      "extensions": ["mjs", "cjs", "js"],
+      "parameters": []
+    },
+    {
+      "extensions": ["mts", "cts", "ts"],
+      "parameters": ["--import", "data:text/javascript,import { register } from \"node:module\"; import { pathToFileURL } from \"node:url\"; register(\"ts-node/esm\", pathToFileURL(\"./\"));"]
+    }
+  ],
+  "nodejs-testing.include": [
+    "./spec"
+  ]
+}
