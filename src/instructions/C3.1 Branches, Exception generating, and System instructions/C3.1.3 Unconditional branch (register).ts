@@ -36,6 +36,7 @@ defineInstruction({
     return `br\tx${Rn}`;
   },
   jit(ctx, {Rn}) {
+    ctx.stop();
     return [
       ctx.builder.return(ctx.builder.call(
         "jumpToPc",

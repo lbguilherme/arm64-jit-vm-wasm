@@ -9,7 +9,7 @@ export interface Instruction<P extends Pattern = Pattern> {
   name: string;
   pattern: P;
   asm(args: { [K in PatternLabels<P[number]>]: number }): string;
-  jit?(ctx: CompilerCtx, args: { [K in PatternLabels<P[number]>]: number }): void | binaryen.ExpressionRef | binaryen.ExpressionRef[];
+  jit(ctx: CompilerCtx, args: { [K in PatternLabels<P[number]>]: number }): void | binaryen.ExpressionRef | binaryen.ExpressionRef[];
   interpret?(cpu: Cpu, args: { [K in PatternLabels<P[number]>]: number }): void;
 }
 

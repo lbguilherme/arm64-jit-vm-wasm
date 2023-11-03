@@ -37,14 +37,14 @@ export class Compiler {
     return funcIndex;
   }
 
-  createWasmFunc(func: () => void) {
+  createWasmFunc(func: () => bigint) {
     const builder = new binaryen.Module();
-    builder.addFunctionImport("imported", "env", "func", binaryen.none, binaryen.none);
-    builder.addFunction("func", binaryen.none, binaryen.none, [], builder.call("imported", [], binaryen.none));
+    builder.addFunctionImport("imported", "env", "func", binaryen.none, binaryen.i64);
+    builder.addFunction("func", binaryen.none, binaryen.i64, [], builder.return_call("imported", [], binaryen.i64));
     builder.addFunctionExport("func", "func");
     const mod = new WebAssembly.Module(builder.emitBinary());
     const instance = new WebAssembly.Instance(mod, { env: { func } });
-    return instance.exports.func as () => void;
+    return instance.exports.func as () => bigint;
   }
 
   #jumpToPc = (pc: bigint) => {
@@ -90,6 +90,8 @@ export class Compiler {
         }
         if (condition) {
           console.log(`\t(conditional branch to ${toPc.toString(16)})`);
+        } else {
+          console.log(`\t(branch to ${toPc.toString(16)})`);
         }
         branches.push({ fromPc: this.pc, toPc, condition });
         pendingPcs.push(toPc);
@@ -100,9 +102,11 @@ export class Compiler {
         hasBranched = true;
       },
       stop() {
+        console.log(`\t(stop)`);
         hasBranched = true;
       },
       getFuncIndex: (funcPc) => {
+        console.log(`\t(function at ${funcPc.toString(16)})`);
         const existingIndex = this.mappingAddressToFuncIndex.get(funcPc);
         if (existingIndex !== undefined) {
           return existingIndex;
@@ -140,6 +144,10 @@ export class Compiler {
       const op = this.#cpu.memory.get32Aligned(ctx.pc);
       const body: binaryen.ExpressionRef[] = [];
 
+      if (op === undefined) {
+        throw new Error(`Out of bounds at ${ctx.pc.toString(16)}`);
+      }
+
       body.push(
         builder.global.set("instruction_counter", builder.i64.add(
           builder.global.get("instruction_counter", binaryen.i64),
@@ -148,13 +156,7 @@ export class Compiler {
       );
 
       decodeInstruction(op, (instruction, args) => {
-        console.log(`${ctx.pc.toString(16).padStart(8, " ")}: ${op.toString(16).padStart(8, "0")}      ${instruction?.asm(args) ?? "???"}`);
-        if (!instruction?.jit) {
-          console.log("TODO: JIT");
-          hasBranched = true;
-          return;
-        }
-
+        console.log(`${ctx.pc.toString(16).padStart(8, " ")}: ${op.toString(16).padStart(8, "0").match(/../g)!.reverse().join("")}      ${instruction?.asm(args) ?? "???"}`);
         const code = instruction.jit(ctx, args);
 
         if (typeof code === "number") {
@@ -198,8 +200,8 @@ export class Compiler {
 
     const timeRender = performance.now();
 
-    builder.validate();
-    builder.optimize();
+    // builder.validate();
+    // builder.optimize();
 
     const timeFinal = performance.now();
 
@@ -207,7 +209,7 @@ export class Compiler {
     console.log(`Render: ${timeRender - timeCodegen}ms`);
     console.log(`Optimize: ${timeFinal - timeRender}ms`);
 
-    console.log(builder.emitText());
+    // console.log(builder.emitText());
 
     const mod = new WebAssembly.Module(builder.emitBinary());
     const instance = new WebAssembly.Instance(mod, {

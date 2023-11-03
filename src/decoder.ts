@@ -29,17 +29,17 @@ function createDecoder() {
   }
 
   code += `const opBin = op.toString(16).padStart(8, "0");\n`;
-  code += `throw new Error("Invalid instruction: " + opBin + " / " + opBin.match(/../g).reverse().join(""));\n`;
+  code += `throw new Error("Invalid instruction: " + opBin.match(/../g).reverse().join(""));\n`;
 
   const func = new Function("op", "instructions", "action", code) as <T>(
     op: number,
     instructions: Instruction[],
-    action: (instruction: Instruction | undefined, args: Record<string, number>) => T,
+    action: (instruction: Instruction, args: Record<string, number>) => T,
   ) => T;
 
   return <T>(
     op: number,
-    action: (instruction: Instruction | undefined, args: Record<string, number>) => T,
+    action: (instruction: Instruction, args: Record<string, number>) => T,
   ) => func(op, instructions, action);
 }
 
