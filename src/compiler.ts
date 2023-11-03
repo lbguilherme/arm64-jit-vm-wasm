@@ -1,3 +1,4 @@
+import { createContext } from "node:vm";
 import { Cpu } from "./cpu.js";
 import { decodeInstruction } from "./decoder.js";
 import binaryen from "binaryen";
@@ -7,6 +8,7 @@ export interface CompilerCtx {
   pc: number,
   builder: binaryen.Module;
   branch(toPc: number, condition?: binaryen.ExpressionRef): void;
+  stop(): void;
   getFuncIndex(pc: number): number;
   allocLocal(type: binaryen.Type): number;
 }
@@ -14,6 +16,7 @@ export interface CompilerCtx {
 export class Compiler {
   #cpu: Cpu;
   funcTable = new WebAssembly.Table({ element: "anyfunc", initial: 1 });
+  compiledFuncIndexes = new Set<number>();
   mappingAddressToFuncIndex = new Map<number, number>();
   freeFuncIndexes: number[] = [0];
 
@@ -44,16 +47,25 @@ export class Compiler {
     return instance.exports.func as () => void;
   }
 
-  compileFunction(entry: number): () => void {
+  #jumpToPc = (pc: bigint) => {
+    return this.compileFunction(Number(pc))();
+  }
+
+  compileFunction(entry: number): () => bigint {
     const timeStart = performance.now();
     const funcName = `pc_${entry.toString(16)}`;
     let funcIndex = this.mappingAddressToFuncIndex.get(entry) ?? this.#allocNewFuncIndex();
 
     this.mappingAddressToFuncIndex.set(entry, funcIndex);
 
+    if (this.compiledFuncIndexes.has(funcIndex)) {
+      return this.funcTable.get(funcIndex);
+    }
+
     const builder = new binaryen.Module();
     builder.addMemoryImport("memory", "env", "memory", true);
     builder.addTableImport("funcTable", "env", "funcTable");
+    builder.addFunctionImport("jumpToPc", "env", "jumpToPc", binaryen.i64, binaryen.i64);
 
     this.#cpu.importRegisters(builder);
 
@@ -66,62 +78,75 @@ export class Compiler {
     const freeLocals = new Set<number>();
     const reservedLocals = new Set<number>([0]);
 
+    let hasBranched = false;
+
+    const ctx: CompilerCtx = {
+      cpu: this.#cpu,
+      pc: 0,
+      builder,
+      branch(toPc, condition) {
+        if (hasBranched) {
+          throw new Error("Can't branch twice");
+        }
+        if (condition) {
+          console.log(`\t(conditional branch to ${toPc.toString(16)})`);
+        }
+        branches.push({ fromPc: this.pc, toPc, condition });
+        pendingPcs.push(toPc);
+        if (condition) {
+          branches.push({ fromPc: this.pc, toPc: ctx.pc + 4 });
+          pendingPcs.push(ctx.pc + 4);
+        }
+        hasBranched = true;
+      },
+      stop() {
+        hasBranched = true;
+      },
+      getFuncIndex: (funcPc) => {
+        const existingIndex = this.mappingAddressToFuncIndex.get(funcPc);
+        if (existingIndex !== undefined) {
+          return existingIndex;
+        }
+
+        const stub = this.createWasmFunc(() => this.compileFunction(funcPc)());
+
+        const newFuncIndex = this.#allocNewFuncIndex();
+        this.mappingAddressToFuncIndex.set(funcPc, newFuncIndex);
+        this.funcTable.set(newFuncIndex, stub);
+
+        return newFuncIndex;
+      },
+      allocLocal(type) {
+        for (const freeLocal of freeLocals) {
+          if (locals[freeLocal] === type) {
+            freeLocals.delete(freeLocal);
+            return freeLocal;
+          }
+        }
+        const id = locals.length;
+        locals.push(type);
+        return id;
+      },
+    };
+
     while (pendingPcs.length) {
-      const blockStartPc = pendingPcs.pop()!;
-      if (pcToCfg.has(blockStartPc)) {
+      ctx.pc = pendingPcs.pop()!;
+      if (pcToCfg.has(ctx.pc)) {
         continue;
       }
 
-      const body: binaryen.ExpressionRef[] = [];
-      let hasBranched = false;
-
-      const ctx: CompilerCtx = {
-        cpu: this.#cpu,
-        pc: blockStartPc,
-        builder,
-        branch(toPc, condition) {
-          if (hasBranched) {
-            throw new Error("Can't branch twice");
-          }
-          if (condition) {
-            console.log(`\t(conditional branch to ${toPc.toString(16)})`);
-          }
-          branches.push({ fromPc: blockStartPc, toPc, condition });
-          pendingPcs.push(toPc);
-          if (condition) {
-            branches.push({ fromPc: blockStartPc, toPc: ctx.pc + 4 });
-            pendingPcs.push(ctx.pc + 4);
-          }
-          hasBranched = true;
-        },
-        getFuncIndex: (funcPc) => {
-          const existingIndex = this.mappingAddressToFuncIndex.get(funcPc);
-          if (existingIndex !== undefined) {
-            return existingIndex;
-          }
-
-          const stub = this.createWasmFunc(() => this.compileFunction(funcPc)());
-
-          const newFuncIndex = this.#allocNewFuncIndex();
-          this.mappingAddressToFuncIndex.set(funcPc, newFuncIndex);
-          this.funcTable.set(newFuncIndex, stub);
-
-          return newFuncIndex;
-        },
-        allocLocal(type) {
-          for (const freeLocal of freeLocals) {
-            if (locals[freeLocal] === type) {
-              freeLocals.delete(freeLocal);
-              return freeLocal;
-            }
-          }
-          const id = locals.length;
-          locals.push(type);
-          return id;
-        },
-      };
+      hasBranched = false;
 
       const op = this.#cpu.memory.get32Aligned(ctx.pc);
+      const body: binaryen.ExpressionRef[] = [];
+
+      body.push(
+        builder.global.set("instruction_counter", builder.i64.add(
+          builder.global.get("instruction_counter", binaryen.i64),
+          builder.i64.const(1, 0)
+        ))
+      );
+
       decodeInstruction(op, (instruction, args) => {
         console.log(`${ctx.pc.toString(16).padStart(8, " ")}: ${op.toString(16).padStart(8, "0")}      ${instruction?.asm(args) ?? "???"}`);
         if (!instruction?.jit) {
@@ -139,6 +164,7 @@ export class Compiler {
         }
       });
 
+
       for (let i = 0; i < locals.length; ++i) {
         if (reservedLocals.has(i)) {
           continue;
@@ -147,12 +173,12 @@ export class Compiler {
       }
 
       if (!hasBranched) {
-        branches.push({ fromPc: blockStartPc, toPc: ctx.pc + 4 });
+        branches.push({ fromPc: ctx.pc, toPc: ctx.pc + 4 });
         pendingPcs.push(ctx.pc + 4);
       }
 
       const block = relooper.addBlock(builder.block(null, body));
-      pcToCfg.set(blockStartPc, block);
+      pcToCfg.set(ctx.pc, block);
     }
 
     for (const branch of branches) {
@@ -167,11 +193,12 @@ export class Compiler {
 
     const finalExpr = relooper.renderAndDispose(pcToCfg.get(entry)!, 0);
 
-    builder.addFunction(funcName, binaryen.none, binaryen.none, locals, finalExpr);
+    builder.addFunction(funcName, binaryen.none, binaryen.i64, locals, finalExpr);
     builder.addFunctionExport(funcName, funcName);
 
     const timeRender = performance.now();
 
+    builder.validate();
     builder.optimize();
 
     const timeFinal = performance.now();
@@ -186,14 +213,16 @@ export class Compiler {
     const instance = new WebAssembly.Instance(mod, {
       env: {
         memory: this.#cpu.memory.wasmMemory,
-        funcTable: this.funcTable
+        funcTable: this.funcTable,
+        jumpToPc: this.#jumpToPc
       },
       registers: this.#cpu.registers as unknown as Record<string, WebAssembly.Global>,
     });
 
-    const func = instance.exports[funcName] as () => void;
+    const func = instance.exports[funcName] as () => bigint;
 
     this.funcTable.set(funcIndex, func);
+    this.compiledFuncIndexes.add(funcIndex);
 
     return func;
   }

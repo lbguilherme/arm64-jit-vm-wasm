@@ -1,6 +1,6 @@
 import binaryen from "binaryen";
-import { CompilerCtx } from "../compiler.js";
-import { defineInstruction } from "./base.js";
+import { CompilerCtx } from "../../compiler.js";
+import { defineInstruction } from "../base.js";
 
 const systemRegisters: {
   name: string;
@@ -34,7 +34,7 @@ systemRegisters[0b11_100_0001_0000_000] = {
 };
 
 defineInstruction({
-  name: "MSR",
+  name: "MRS (Move System register to general-purpose register)",
   pattern: [1, 1, 0, 1, 0, 1, 0, 1, 0, 0, 1, ["Rsys", 16], ["Rt", 5]],
   asm({Rsys, Rt}) {
     const systemRegister = systemRegisters[Rsys];

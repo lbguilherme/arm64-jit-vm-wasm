@@ -10,6 +10,8 @@ export function makeCpu() {
   const memory = new Memory(new WebAssembly.Memory({ initial: 1024, maximum: 1024, shared: true }));
   const cpu = new Cpu(memory, 1024);
 
+  cpu.registers.sp_el0.value = BigInt(cpu.memory.buffer.byteLength);
+
   return cpu;
 }
 

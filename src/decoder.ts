@@ -28,7 +28,8 @@ function createDecoder() {
     i++;
   }
 
-  code += `return action(undefined, {});\n`;
+  code += `const opBin = op.toString(16).padStart(8, "0");\n`;
+  code += `throw new Error("Invalid instruction: " + opBin + " / " + opBin.match(/../g).reverse().join(""));\n`;
 
   const func = new Function("op", "instructions", "action", code) as <T>(
     op: number,
