@@ -13,8 +13,8 @@ export interface Instruction<P extends Pattern = Pattern> {
   interpret?(cpu: Cpu, args: { [K in PatternLabels<P[number]>]: number }): void;
 }
 
-export function immToString(imm: number) {
-  return imm === 0 ? "#0" : `#${imm < 0 ? "-" : ""}0x${Math.abs(imm).toString(16)}`;
+export function immToString(imm: number | bigint) {
+  return imm === 0 ? "#0" : `#${imm < 0 ? "-" : ""}0x${(imm < 0 ? -imm : imm).toString(16)}`;
 }
 
 export const instructions: Instruction[] = [];
