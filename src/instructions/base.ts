@@ -14,7 +14,7 @@ export interface Instruction<P extends Pattern = Pattern> {
 }
 
 export function immToString(imm: number | bigint) {
-  return imm === 0 ? "#0" : `#${imm < 0 ? "-" : ""}0x${(imm < 0 ? -imm : imm).toString(16)}`;
+  return imm === 0 ? "#0" : imm > -10 && imm < 10 ? `#${imm}` : `#${imm < 0 ? "-" : ""}0x${(imm < 0 ? -imm : imm).toString(16)}`;
 }
 
 export const instructions: Instruction[] = [];

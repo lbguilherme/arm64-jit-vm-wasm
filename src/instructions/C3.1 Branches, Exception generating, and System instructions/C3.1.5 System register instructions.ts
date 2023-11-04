@@ -30,6 +30,34 @@ systemRegisters[0b11_000_0010_0000_001] = {
   name: "TTBR1_EL1",
 };
 
+systemRegisters[0b11_011_0000_0000_001] = {
+  name: "CTR_EL0",
+  load(ctx) {
+    const dic = 0b0n; // Instruction cache invalidation to the Point of Unification is required for data to instruction coherence.
+    const idc = 0b0n; // Data cache clean to the Point of Unification is required for instruction to data coherence, unless CLIDR_EL1.LoC == 0b000 or (CLIDR_EL1.LoUIS == 0b000 && CLIDR_EL1.LoUU == 0b000).
+    const cwg = 0b0001n; // No cache write-back implementation.
+    const erg = 0b0000n; // No information.
+    const dminLine = 0b0010n; // 4 words.
+    const l1ip = 0b11n; // Physical Index, Physical Tag (PIPT)
+    const iminLine = 0b0010n; // 4 words.
+    const value = (dic << 29n) | (idc << 28n) | (cwg << 24n) | (erg << 20n) | (dminLine << 16n) | (l1ip << 14n) | (iminLine << 0n);
+    return ctx.builder.i64.const(Number(value & 0xffffffffn), Number(value >> 32n));
+  }
+};
+
+const systemCall: {
+  name: string;
+  action?(ctx: CompilerCtx): binaryen.ExpressionRef;
+}[] = [];
+
+systemCall[0b00_011_0011_1111_110] = {
+  name: "isb"
+};
+
+systemCall[0b00_011_0011_1111_101] = {
+  name: "dmb"
+};
+
 defineInstruction({
   name: "MRS (Move System register to general-purpose register)",
   pattern: [1, 1, 0, 1, 0, 1, 0, 1, 0, 0, 1, ["Rsys", 16], ["Rt", 5]],
@@ -49,21 +77,20 @@ defineInstruction({
   },
 });
 
-
 defineInstruction({
   name: "MSR (Move general-purpose register to System register)",
   pattern: [1, 1, 0, 1, 0, 1, 0, 1, 0, 0, 0, ["Rsys", 16], ["Rt", 5]],
   asm({Rsys, Rt}) {
-    if (Rsys === 0b00_011_0011_1111_110 && Rt === 0b11111) {
-      return "isb";
+    if (Rt === 0b11111 && systemCall[Rsys]) {
+      return systemCall[Rsys].name;
     }
     const systemRegister = systemRegisters[Rsys];
     const name = systemRegister?.name ?? `0b${Rsys.toString(2).padStart(16, "0")}`;
     return `msr\t${name}, x${Rt}`;
   },
   jit(ctx, {Rsys, Rt}) {
-    if (Rsys === 0b00_011_0011_1111_110 && Rt === 0b11111) {
-      return; // ISB
+    if (Rt === 0b111111 && systemCall[Rsys]) {
+      return systemCall[Rsys].action?.(ctx);
     }
 
     const systemRegister = systemRegisters[Rsys];
@@ -73,4 +100,3 @@ defineInstruction({
     }
   },
 });
-

@@ -14,6 +14,8 @@ defineInstruction({
     const imm = BigInt(signExtend((immhi << 2) | immlo, 21)) << 12n;
     const value = base + imm;
 
+    // console.log(`mem[${value.toString(16)}] = ${ctx.cpu.memory.get64Aligned(Number(value))}`);
+
     return ctx.builder.global.set(`x${Rd}`,
       ctx.builder.i64.const(Number(value & 0xffffffffn), Number(value >> 32n))
     );

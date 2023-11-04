@@ -148,12 +148,12 @@ export class Compiler {
         throw new Error(`Out of bounds at ${ctx.pc.toString(16)}`);
       }
 
-      body.push(
-        builder.global.set("instruction_counter", builder.i64.add(
-          builder.global.get("instruction_counter", binaryen.i64),
-          builder.i64.const(1, 0)
-        ))
-      );
+      // body.push(
+      //   builder.global.set("instruction_counter", builder.i64.add(
+      //     builder.global.get("instruction_counter", binaryen.i64),
+      //     builder.i64.const(1, 0)
+      //   ))
+      // );
 
       decodeInstruction(op, (instruction, args) => {
         console.log(`${ctx.pc.toString(16).padStart(8, " ")}: ${op.toString(16).padStart(8, "0").match(/../g)!.reverse().join("")}      ${instruction?.asm(args) ?? "???"}`);
