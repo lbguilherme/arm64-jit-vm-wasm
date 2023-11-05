@@ -3,7 +3,7 @@ import { defineInstruction, immToString, signExtend } from "../base.js";
 
 defineInstruction({
   name: "STP (Store Pair)",
-  pattern: [["sf", 1], 0, 1, 0, 1, 0, ["mode", 3], 0, ["imm7", 7], ["Rt2", 5], ["Rn", 5], ["Rt", 5]],
+  pattern: [["sf", 1], 0, 1, 0, 1, 0, 0, ["mode", 2], 0, ["imm7", 7], ["Rt2", 5, { not: 0b11111 }], ["Rn", 5], ["Rt", 5, { not: 0b11111 }]],
   asm({sf, mode, imm7, Rt2, Rn, Rt}) {
     const reg = Rn === 31 ? (sf ? "sp" : "wsp") : `${sf ? "x" : "w"}${Rn}`;
     const imm = immToString(signExtend(imm7, 7) << (sf ? 3 : 2));

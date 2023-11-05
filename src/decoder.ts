@@ -9,6 +9,7 @@ function createDecoder() {
     let maskResult = 0;
     const args: string[] = [];
     let bit = 32;
+    const checks: string[] = [];
     for (const entry of instruction.pattern) {
       if (typeof entry === "number") {
         mask = (mask << 1) | 1;
@@ -16,13 +17,26 @@ function createDecoder() {
         bit--;
       } else {
         const len = entry[1];
+        const options = entry[2];
         bit -= len;
         mask = mask << len;
         maskResult = maskResult << len;
-        args.push(`${JSON.stringify(entry[0])}: (op & ${((1 << len) - 1) << bit}) >> ${bit}`);
+        const paramValue = `(op >> ${bit}) & ${((1 << len) - 1)}`;
+        args.push(`${JSON.stringify(entry[0])}: ${paramValue}`);
+        if (options?.not !== undefined) {
+          for (const not of Array.isArray(options.not) ? options.not : [options.not]) {
+            checks.push(`(${paramValue}) !== ${not}`);
+          }
+        }
+        if (options?.only !== undefined) {
+          const only = Array.isArray(options.only) ? options.only : [options.only];
+          checks.push(`(${only.map(v => `(${paramValue}) === ${v}`).join(" || ")})`);
+        }
       }
     }
-    code += `if ((op & ${mask}) === ${maskResult}) {\n`;
+    checks.unshift(`(op & ${mask}) === ${maskResult}`);
+    code += `// ${instruction.name}\n`;
+    code += `if (${checks.join(" && ")}) {\n`;
     code += `  return action(instructions[${i}], {${args.join(", ")}});\n`;
     code += `}\n`;
     i++;

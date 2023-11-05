@@ -2,8 +2,13 @@ import binaryen from "binaryen";
 import { CompilerCtx } from "../compiler.js";
 import { Cpu } from "../cpu.js";
 
-type Pattern = readonly (0 | 1 | readonly [string, number])[];
-type PatternLabels<E extends Pattern[number]> = E extends readonly [string, number] ? E[0] : never;
+interface ParamOptions {
+  not?: number | number[];
+  only?: number | number[];
+}
+
+type Pattern = readonly (0 | 1 | readonly [string, number, ParamOptions?])[];
+type PatternLabels<E extends Pattern[number]> = E extends readonly [string, number, ParamOptions?] ? E[0] : never;
 
 export interface Instruction<P extends Pattern = Pattern> {
   name: string;
