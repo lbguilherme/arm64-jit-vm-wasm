@@ -34,6 +34,9 @@ function createDecoder() {
         }
       }
     }
+    if (bit !== 0) {
+      throw new Error("Invalid pattern length: " + instruction.name);
+    }
     checks.unshift(`(op & ${mask}) === ${maskResult}`);
     code += `// ${instruction.name}\n`;
     code += `if (${checks.join(" && ")}) {\n`;

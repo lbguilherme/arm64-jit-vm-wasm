@@ -49,12 +49,12 @@ defineInstruction({
   name: "MRS (Move System register to general-purpose register)",
   pattern: [1, 1, 0, 1, 0, 1, 0, 1, 0, 0, 1, 1, ["Rsys", 15], ["Rt", 5, { not: 0b11111 }]],
   asm({Rsys, Rt}) {
-    const systemRegister = systemRegisters[0b10_000_0000_0000_000 & Rsys];
-    const name = systemRegister?.name ?? `0b1${Rsys.toString(2).padStart(16, "0")}`;
+    const systemRegister = systemRegisters[0b10_000_0000_0000_000 | Rsys];
+    const name = systemRegister?.name ?? `#0b1${Rsys.toString(2).padStart(16, "0")}`;
     return `mrs\tx${Rt}, ${name}`;
   },
   jit(ctx, {Rsys, Rt}) {
-    const systemRegister = systemRegisters[0b10_000_0000_0000_000 & Rsys];
+    const systemRegister = systemRegisters[0b10_000_0000_0000_000 | Rsys];
 
     if (systemRegister?.load) {
       return ctx.builder.global.set(`x${Rt}`, systemRegister.load(ctx));
@@ -68,12 +68,12 @@ defineInstruction({
   name: "MSR (Move general-purpose register to System register)",
   pattern: [1, 1, 0, 1, 0, 1, 0, 1, 0, 0, 0, 1, ["Rsys", 15], ["Rt", 5, { not: 0b11111 }]],
   asm({Rsys, Rt}) {
-    const systemRegister = systemRegisters[0b10_000_0000_0000_000 & Rsys];
-    const name = systemRegister?.name ?? `0b1${Rsys.toString(2).padStart(16, "0")}`;
+    const systemRegister = systemRegisters[0b10_000_0000_0000_000 | Rsys];
+    const name = systemRegister?.name ?? `#0b1${Rsys.toString(2).padStart(16, "0")}`;
     return `msr\t${name}, x${Rt}`;
   },
   jit(ctx, {Rsys, Rt}) {
-    const systemRegister = systemRegisters[0b10_000_0000_0000_000 & Rsys];
+    const systemRegister = systemRegisters[0b10_000_0000_0000_000 | Rsys];
 
     if (systemRegister?.store) {
       return systemRegister.store(ctx, ctx.builder.global.get(`x${Rt}`, binaryen.i64));

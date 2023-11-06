@@ -4,7 +4,7 @@ import { shiftEval, shiftName } from "../common/shift.js";
 
 defineInstruction({
   name: "ADD (Add)",
-  pattern: [["sf", 1], 0, 0, 0, 1, 0, 1, 0, ["shift", 2], 0, ["Rm", 5], ["imm6", 6], ["Rn", 5], ["Rd", 5]],
+  pattern: [["sf", 1], 0, 0, 0, 1, 0, 1, 1, ["shift", 2], 0, ["Rm", 5], ["imm6", 6], ["Rn", 5], ["Rd", 5]],
   asm({sf, shift, Rm, imm6, Rn, Rd}) {
     return "add\t" + [
       `${sf ? "x" : "w"}${Rd}`,

@@ -15,6 +15,7 @@ import "./instructions/C3.4 Data processing - immediate/C3.4.3 Move (wide immedi
 import "./instructions/C3.4 Data processing - immediate/C3.4.5 PC-relative address calculation.js";
 import "./instructions/C3.4 Data processing - immediate/C3.4.6 Bitfield move.js";
 import "./instructions/C3.5 Data processing - register/C3.5.1 Arithmetic (shifted register).js";
+import "./instructions/C3.5 Data processing - register/C3.5.2 Arithmetic (extended register).js";
 import "./instructions/C3.5 Data processing - register/C3.5.5 Logical (shifted register).js";
 import "./instructions/C3.5 Data processing - register/C3.5.7 Shift (register).js";
 import "./instructions/C3.5 Data processing - register/C3.5.8 Multiply and divide.js";
