@@ -2,15 +2,19 @@ import binaryen from "binaryen";
 
 import { ArmSystem } from "./system.js";
 import { readFileSync, writeFileSync } from "fs";
+try {
 
-const system = new ArmSystem({
-  memory: {
-    maxSizeMb: 1024
-  },
-  linux: {
-    image: readFileSync("linux.bin").buffer
-  }
-});
+  const system = new ArmSystem({
+    memory: {
+      maxSizeMb: 1024
+    },
+    linux: {
+      image: readFileSync("linux.bin").buffer
+    }
+  });
+} catch (e) {
+  console.error(e)
+}
 // var builder = new binaryen.Module();
 
 // builder.addFunction("add", binaryen.createType([ binaryen.i32, binaryen.i32 ]), binaryen.i32, [ binaryen.i32 ],

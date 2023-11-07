@@ -30,6 +30,26 @@ systemRegisters[0b11_000_0010_0000_001] = {
   name: "TTBR1_EL1",
 };
 
+systemRegisters[0b11_000_0100_0000_000] = {
+  name: "SPSR_EL1",
+  load(ctx) {
+    return ctx.builder.global.get("spsr_el1", binaryen.i64);
+  },
+  store(ctx, value) {
+    return ctx.builder.global.set("spsr_el1", value);
+  }
+};
+
+systemRegisters[0b11_000_0100_0000_001] = {
+  name: "ELR_EL1",
+  load(ctx) {
+    return ctx.builder.global.get("elr_el1", binaryen.i64);
+  },
+  store(ctx, value) {
+    return ctx.builder.global.set("elr_el1", value);
+  }
+};
+
 systemRegisters[0b11_011_0000_0000_001] = {
   name: "CTR_EL0",
   load(ctx) {
@@ -50,7 +70,7 @@ defineInstruction({
   pattern: [1, 1, 0, 1, 0, 1, 0, 1, 0, 0, 1, 1, ["Rsys", 15], ["Rt", 5, { not: 0b11111 }]],
   asm({Rsys, Rt}) {
     const systemRegister = systemRegisters[0b10_000_0000_0000_000 | Rsys];
-    const name = systemRegister?.name ?? `#0b1${Rsys.toString(2).padStart(16, "0")}`;
+    const name = systemRegister?.name ?? `#0b1${Rsys.toString(2).padStart(15, "0")}`;
     return `mrs\tx${Rt}, ${name}`;
   },
   jit(ctx, {Rsys, Rt}) {
@@ -66,17 +86,22 @@ defineInstruction({
 
 defineInstruction({
   name: "MSR (Move general-purpose register to System register)",
-  pattern: [1, 1, 0, 1, 0, 1, 0, 1, 0, 0, 0, 1, ["Rsys", 15], ["Rt", 5, { not: 0b11111 }]],
+  pattern: [1, 1, 0, 1, 0, 1, 0, 1, 0, 0, 0, 1, ["Rsys", 15], ["Rt", 5]],
   asm({Rsys, Rt}) {
     const systemRegister = systemRegisters[0b10_000_0000_0000_000 | Rsys];
-    const name = systemRegister?.name ?? `#0b1${Rsys.toString(2).padStart(16, "0")}`;
-    return `msr\t${name}, x${Rt}`;
+    const name = systemRegister?.name ?? `#0b1${Rsys.toString(2).padStart(15, "0")}`;
+    return "msr\t"+ [
+      name,
+      Rt === 31 ? "xzr" : `x${Rt}`
+    ].join(", ");
   },
   jit(ctx, {Rsys, Rt}) {
     const systemRegister = systemRegisters[0b10_000_0000_0000_000 | Rsys];
 
     if (systemRegister?.store) {
-      return systemRegister.store(ctx, ctx.builder.global.get(`x${Rt}`, binaryen.i64));
+      return systemRegister.store(ctx,
+        Rt === 31 ? ctx.builder.i64.const(0, 0) : ctx.builder.global.get(`x${Rt}`, binaryen.i64)
+      );
     }
   },
 });

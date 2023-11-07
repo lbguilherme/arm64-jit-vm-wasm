@@ -3,6 +3,7 @@ export { instructions, Instruction } from "./instructions/base.js";
 import "./instructions/C3.1 Branches, Exception generating, and System instructions/C3.1.1 Conditional branch.js";
 import "./instructions/C3.1 Branches, Exception generating, and System instructions/C3.1.2 Unconditional branch (immediate).js";
 import "./instructions/C3.1 Branches, Exception generating, and System instructions/C3.1.3 Unconditional branch (register).js";
+import "./instructions/C3.1 Branches, Exception generating, and System instructions/C3.1.4 Exception generation and return.js";
 import "./instructions/C3.1 Branches, Exception generating, and System instructions/C3.1.5 System register instructions.js";
 import "./instructions/C3.1 Branches, Exception generating, and System instructions/C3.1.7 System instructions.js";
 import "./instructions/C3.1 Branches, Exception generating, and System instructions/C3.1.8 Hint instructions.js";
