@@ -4,8 +4,8 @@ export function condName(cond: number) {
   switch (cond) {
     case 0b0000: return "eq";
     case 0b0001: return "ne";
-    case 0b0010: return "cs";
-    case 0b0011: return "cc";
+    case 0b0010: return "hs";
+    case 0b0011: return "lo";
     case 0b0100: return "mi";
     case 0b0101: return "pl";
     case 0b0110: return "vs";

@@ -3,36 +3,6 @@ import { defineInstruction, immToString, signExtend } from "../base.js";
 import { add32, add64, addWithCarry32, addWithCarry64 } from "../common/math.js";
 
 defineInstruction({
-  name: "ADD (Add)",
-  pattern: [["sf", 1], 0, 0, 1, 0, 0, 0, 1, 0, ["sh", 1], ["imm12", 12], ["Rn", 5], ["Rd", 5]],
-  asm({sf, sh, imm12, Rn, Rd}) {
-    return "add\t" + [
-      Rd === 31 ? (sf ? "sp" : "wsp") : `${sf ? "x" : "w"}${Rd}`,
-      Rn === 31 ? (sf ? "sp" : "wsp") : `${sf ? "x" : "w"}${Rn}`,
-      immToString(imm12),
-      ...(sh ? ["lsl #12"] : [])
-    ].join(", ");
-  },
-  jit(ctx, {sf, sh, imm12, Rn, Rd}) {
-    if (sf === 0) {
-      throw new Error("32-bit ADD not implemented");
-    }
-    const operand1 = Rn === 31 ? ctx.cpu.loadSp(ctx.builder) : ctx.builder.global.get(`x${Rn}`, binaryen.i64);
-    const operand2 = ctx.builder.i64.const(sh ? imm12 << 12 : imm12, 0);
-    const result = ctx.builder.i64.add(operand1, operand2);
-    if (Rd === 31) {
-      const resultLocal = ctx.allocLocal(binaryen.i64);
-      return [
-        ctx.builder.local.set(resultLocal, result),
-        ctx.cpu.storeSpFromLocal(ctx.builder, resultLocal)
-      ];
-    } else {
-      return ctx.builder.global.set(`x${Rd}`, result);
-    }
-  }
-});
-
-defineInstruction({
   name: "ADD (Add) / SUB (Subtract)",
   pattern: [["sf", 1], ["op", 1], 0, 1, 0, 0, 0, 1, 0, ["sh", 1], ["imm12", 12], ["Rn", 5], ["Rd", 5]],
   asm({sf, op, sh, imm12, Rn, Rd}) {

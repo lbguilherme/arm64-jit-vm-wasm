@@ -10,7 +10,7 @@ export function shiftName(shift: number) {
   throw new Error("Invalid shift: 0b" + shift.toString(2));
 }
 
-export function shiftEval(builder: binaryen.Module, shift: number, amount: number, operand: binaryen.ExpressionRef) {
+export function shiftEval64(builder: binaryen.Module, shift: number, amount: number, operand: binaryen.ExpressionRef) {
   if (amount === 0) {
     return operand;
   }
@@ -20,6 +20,20 @@ export function shiftEval(builder: binaryen.Module, shift: number, amount: numbe
     case 0b01: return builder.i64.shr_u(operand, builder.i64.const(amount, 0));
     case 0b10: return builder.i64.shr_s(operand, builder.i64.const(amount, 0));
     case 0b11: return builder.i64.rotl(operand, builder.i64.const(amount, 0));
+  }
+  throw new Error("Invalid shift: 0b" + shift.toString(2));
+}
+
+export function shiftEval32(builder: binaryen.Module, shift: number, amount: number, operand: binaryen.ExpressionRef) {
+  if (amount === 0) {
+    return operand;
+  }
+
+  switch (shift) {
+    case 0b00: return builder.i32.shl(operand, builder.i32.const(amount));
+    case 0b01: return builder.i32.shr_u(operand, builder.i32.const(amount));
+    case 0b10: return builder.i32.shr_s(operand, builder.i32.const(amount));
+    case 0b11: return builder.i32.rotl(operand, builder.i32.const(amount));
   }
   throw new Error("Invalid shift: 0b" + shift.toString(2));
 }

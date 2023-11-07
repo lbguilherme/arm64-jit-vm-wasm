@@ -6,10 +6,10 @@ defineInstruction({
   name: "B.cond (Branch condition) / BC.cond (Branch Consistent conditionally)",
   pattern: [0, 1, 0, 1, 0, 1, 0, 0, ["imm19", 19], ["consistent", 1], ["cond", 4]],
   asm({imm19, consistent, cond}) {
-    return `b${consistent ? "c" : ""}.${condName(cond)}\t${immToString((imm19 * 4) + 4)}`;
+    return `b${consistent ? "c" : ""}.${condName(cond)}\t${immToString((signExtend(imm19, 19) * 4) + 4)}`;
   },
   jit(ctx, {imm19, cond}) {
-    ctx.branch(ctx.pc + imm19 * 4, condEval(ctx.builder, cond));
+    ctx.branch(ctx.pc + signExtend(imm19, 19) * 4, condEval(ctx.builder, cond));
   }
 });
 

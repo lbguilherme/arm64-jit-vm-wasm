@@ -1,6 +1,6 @@
 import binaryen from "binaryen";
 import { defineInstruction, immToString } from "../base.js";
-import { shiftEval, shiftName } from "../common/shift.js";
+import { shiftEval64, shiftName } from "../common/shift.js";
 
 defineInstruction({
   name: "ORR (Bitwise inclusive OR)",
@@ -19,7 +19,7 @@ defineInstruction({
     }
 
     const operand1 = ctx.builder.global.get(`x${Rn}`, binaryen.i64);
-    const operand2 = shiftEval(ctx.builder, shift, imm6, ctx.builder.global.get(`x${Rm}`, binaryen.i64));
+    const operand2 = shiftEval64(ctx.builder, shift, imm6, ctx.builder.global.get(`x${Rm}`, binaryen.i64));
     const result = Rn === 31 ? operand2 : ctx.builder.i64.or(operand1, operand2);
 
     return ctx.builder.global.set(`x${Rd}`, result);
@@ -43,7 +43,7 @@ defineInstruction({
     }
 
     const operand1 = ctx.builder.global.get(`x${Rn}`, binaryen.i64);
-    const operand2 = shiftEval(ctx.builder, shift, imm6, ctx.builder.global.get(`x${Rm}`, binaryen.i64));
+    const operand2 = shiftEval64(ctx.builder, shift, imm6, ctx.builder.global.get(`x${Rm}`, binaryen.i64));
     const result = ctx.builder.i64.and(operand1, operand2);
 
     return ctx.builder.global.set(`x${Rd}`, result);
@@ -67,7 +67,7 @@ defineInstruction({
     }
 
     const operand1 = ctx.builder.global.get(`x${Rn}`, binaryen.i64);
-    const operand2 = shiftEval(ctx.builder, shift, imm6, ctx.builder.global.get(`x${Rm}`, binaryen.i64));
+    const operand2 = shiftEval64(ctx.builder, shift, imm6, ctx.builder.global.get(`x${Rm}`, binaryen.i64));
     const result = ctx.builder.i64.and(operand1, operand2);
     const resultLocal = ctx.allocLocal(binaryen.i64);
 
@@ -103,7 +103,7 @@ defineInstruction({
     }
 
     const operand1 = ctx.builder.global.get(`x${Rn}`, binaryen.i64);
-    const operand2 = shiftEval(ctx.builder, shift, imm6, ctx.builder.global.get(`x${Rm}`, binaryen.i64));
+    const operand2 = shiftEval64(ctx.builder, shift, imm6, ctx.builder.global.get(`x${Rm}`, binaryen.i64));
     const result = ctx.builder.i64.and(operand1, ctx.builder.i64.xor(operand2, ctx.builder.i64.const(-1, -1)));
 
     return ctx.builder.global.set(`x${Rd}`, result);
