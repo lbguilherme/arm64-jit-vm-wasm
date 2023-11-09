@@ -34,7 +34,7 @@ export class Memory {
   }
 
   set8(addr: number, value: number) {
-    return this.#mem8[addr] = value;
+    this.#mem8[addr] = value;
   }
 
   get32(addr: number) {
@@ -45,8 +45,12 @@ export class Memory {
     return this.#mem32[addr / 4];
   }
 
+  set32(addr: number, value: number) {
+    this.#memview.setUint32(Number(addr), value, true);
+  }
+
   set32Aligned(addr: number, value: number) {
-    return this.#mem32[addr / 4] = value;
+    this.#mem32[addr / 4] = value;
   }
 
   get64(addr: number) {
@@ -57,8 +61,12 @@ export class Memory {
     return this.#mem64[addr / 8];
   }
 
+  set64(addr: number, value: bigint) {
+    this.#memview.setBigUint64(Number(addr), value, true);
+  }
+
   set64Aligned(addr: number, value: bigint) {
-    return this.#mem64[addr / 8] = value;
+    this.#mem64[addr / 8] = value;
   }
 }
 

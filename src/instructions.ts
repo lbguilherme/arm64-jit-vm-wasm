@@ -9,6 +9,7 @@ import "./instructions/C3.1 Branches, Exception generating, and System instructi
 import "./instructions/C3.1 Branches, Exception generating, and System instructions/C3.1.8 Hint instructions.js";
 import "./instructions/C3.1 Branches, Exception generating, and System instructions/C3.1.9 Barriers and CLREX instructions.js";
 import "./instructions/C3.2 Loads and stores/C3.2.1 Load and store register.js";
+import "./instructions/C3.2 Loads and stores/C3.2.2 Load and store register (unscaled offset).js";
 import "./instructions/C3.2 Loads and stores/C3.2.3 Load and store pair.js";
 import "./instructions/C3.4 Data processing - immediate/C3.4.1 Arithmetic (immediate).js";
 import "./instructions/C3.4 Data processing - immediate/C3.4.2 Logical (immediate).js";
@@ -20,4 +21,5 @@ import "./instructions/C3.5 Data processing - register/C3.5.2 Arithmetic (extend
 import "./instructions/C3.5 Data processing - register/C3.5.5 Logical (shifted register).js";
 import "./instructions/C3.5 Data processing - register/C3.5.7 Shift (register).js";
 import "./instructions/C3.5 Data processing - register/C3.5.8 Multiply and divide.js";
+import "./instructions/C3.5 Data processing - register/C3.5.11 Conditional select.js";
 import "./instructions/C3.5 Data processing - register/C3.5.12 Conditional comparison.js";

@@ -1,6 +1,5 @@
-import { createContext } from "node:vm";
 import { Cpu } from "./cpu.js";
-import { decodeInstruction } from "./decoder.js";
+import { createInstructionDecoder } from "./decoder.js";
 import binaryen from "binaryen";
 
 export interface CompilerCtx {
@@ -19,6 +18,7 @@ export class Compiler {
   compiledFuncIndexes = new Set<number>();
   mappingAddressToFuncIndex = new Map<number, number>();
   freeFuncIndexes: number[] = [0];
+  decodeInstruction = createInstructionDecoder();
 
   constructor(cpu: Cpu) {
     this.#cpu = cpu;
@@ -48,10 +48,10 @@ export class Compiler {
   }
 
   #jumpToPc = (pc: bigint) => {
-    return this.compileFunction(Number(pc))();
+    return this.getCompiledFunction(Number(pc))();
   }
 
-  compileFunction(entry: number): () => bigint {
+  getCompiledFunction(entry: number): () => bigint {
     const timeStart = performance.now();
     const funcName = `pc_${entry.toString(16)}`;
     let funcIndex = this.mappingAddressToFuncIndex.get(entry) ?? this.#allocNewFuncIndex();
@@ -88,10 +88,12 @@ export class Compiler {
         if (hasBranched) {
           throw new Error("Can't branch twice");
         }
-        if (condition) {
-          console.log(`\t(conditional branch to ${toPc.toString(16)})`);
-        } else {
-          console.log(`\t(branch to ${toPc.toString(16)})`);
+        if (process.env.VERBOSE) {
+          if (condition) {
+            console.log(`\t(conditional branch to ${toPc.toString(16)})`);
+          } else {
+            console.log(`\t(branch to ${toPc.toString(16)})`);
+          }
         }
         branches.push({ fromPc: this.pc, toPc, condition });
         pendingPcs.push(toPc);
@@ -102,17 +104,21 @@ export class Compiler {
         hasBranched = true;
       },
       stop() {
-        console.log(`\t(stop)`);
+        if (process.env.VERBOSE) {
+          console.log(`\t(stop)`);
+        }
         hasBranched = true;
       },
       getFuncIndex: (funcPc) => {
-        console.log(`\t(function at ${funcPc.toString(16)})`);
+        if (process.env.VERBOSE) {
+          console.log(`\t(function at ${funcPc.toString(16)})`);
+        }
         const existingIndex = this.mappingAddressToFuncIndex.get(funcPc);
         if (existingIndex !== undefined) {
           return existingIndex;
         }
 
-        const stub = this.createWasmFunc(() => this.compileFunction(funcPc)());
+        const stub = this.createWasmFunc(() => this.getCompiledFunction(funcPc)());
 
         const newFuncIndex = this.#allocNewFuncIndex();
         this.mappingAddressToFuncIndex.set(funcPc, newFuncIndex);
@@ -155,8 +161,10 @@ export class Compiler {
       //   ))
       // );
 
-      decodeInstruction(op, (instruction, args) => {
-        console.log(`${ctx.pc.toString(16).padStart(8, " ")}: ${op.toString(16).padStart(8, "0").match(/../g)!.reverse().join("")}      ${instruction?.asm(args) ?? "???"}`);
+      this.decodeInstruction(op, (instruction, args) => {
+        if (process.env.VERBOSE) {
+          console.log(`${ctx.pc.toString(16).padStart(8, " ")}: ${op.toString(16).padStart(8, "0").match(/../g)!.reverse().join("")}      ${instruction?.asm(args) ?? "???"}`);
+        }
         const code = instruction.jit(ctx, args);
 
         if (typeof code === "number") {
@@ -165,7 +173,6 @@ export class Compiler {
           body.push(...code);
         }
       });
-
 
       for (let i = 0; i < locals.length; ++i) {
         if (reservedLocals.has(i)) {
@@ -205,11 +212,12 @@ export class Compiler {
 
     const timeFinal = performance.now();
 
-    console.log(`Codegen: ${timeCodegen - timeStart}ms`);
-    console.log(`Render: ${timeRender - timeCodegen}ms`);
-    console.log(`Optimize: ${timeFinal - timeRender}ms`);
-
-    // console.log(builder.emitText());
+    if (process.env.VERBOSE) {
+      console.log(`Codegen: ${timeCodegen - timeStart}ms`);
+      console.log(`Render: ${timeRender - timeCodegen}ms`);
+      console.log(`Optimize: ${timeFinal - timeRender}ms`);
+      console.log(builder.emitText());
+    }
 
     const mod = new WebAssembly.Module(builder.emitBinary());
     const instance = new WebAssembly.Instance(mod, {

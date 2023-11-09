@@ -47,14 +47,14 @@ defineInstruction({
     ].join(", ");
   },
   jit(ctx, {b5, op, b40, imm14, Rt}) {
-    const cond = ctx.builder.i32.and(
+    const cond = ctx.builder.i64.and(
       ctx.builder.global.get(`x${Rt}`, binaryen.i64),
       b5 ? ctx.builder.i64.const(0, 1 << b40) : ctx.builder.i64.const(1 << b40, 0)
     );
 
     ctx.branch(
       ctx.pc + imm14 * 4,
-      op ? ctx.builder.i32.eqz(cond) : cond,
+      op ? ctx.builder.i64.eqz(cond) : ctx.builder.i64.ne(cond, ctx.builder.i64.const(0, 0)),
     );
   }
 });

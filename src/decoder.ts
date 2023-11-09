@@ -1,7 +1,6 @@
 import { Instruction, instructions } from "./instructions.js";
-import { Cpu } from "./cpu.js";
 
-function createDecoder() {
+export function createInstructionDecoder() {
   let code = ``;
   let i = 0;
   for (const instruction of instructions) {
@@ -59,13 +58,3 @@ function createDecoder() {
     action: (instruction: Instruction, args: Record<string, number>) => T,
   ) => func(op, instructions, action);
 }
-
-export const decodeInstruction = createDecoder();
-
-export function decodeToAsm(op: number) {
-  return decodeInstruction(op, (instruction, args) => instruction?.asm(args));
-}
-
-// export const decodeAndInterpret = (op: number, cpu: Cpu) => decoder(op, instructions, instruction => (...args) => instruction.interpret(cpu, ...args));
-
-

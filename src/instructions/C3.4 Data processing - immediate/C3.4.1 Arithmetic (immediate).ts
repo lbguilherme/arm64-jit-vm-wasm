@@ -18,8 +18,8 @@ defineInstruction({
     if (sf === 0) {
       operand1 = ctx.builder.i32.wrap(operand1);
     }
-    const imm = (op === 1 ? signExtend(imm12, 12) : imm12) << (sh ? 12 : 0);
-    const operand2 = sf === 0 ? ctx.builder.i32.const(imm) : ctx.builder.i64.const(imm, imm < 0 ? -1 : 0);
+    const imm = imm12 << (sh ? 12 : 0);
+    const operand2 = sf === 0 ? ctx.builder.i32.const(imm) : ctx.builder.i64.const(imm, 0);
     const result = op === 0
       ? sf === 0 ? ctx.builder.i64.extend_u(ctx.builder.i32.add(operand1, operand2)) : ctx.builder.i64.add(operand1, operand2)
       : sf === 0 ? ctx.builder.i64.extend_u(ctx.builder.i32.sub(operand1, operand2)) : ctx.builder.i64.sub(operand1, operand2);

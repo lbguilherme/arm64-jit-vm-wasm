@@ -1,6 +1,6 @@
 import binaryen from "binaryen";
-import { CompilerCtx } from "../compiler.js";
-import { Cpu } from "../cpu.js";
+import type { CompilerCtx } from "../compiler.js";
+import type { Cpu } from "../cpu.js";
 
 interface ParamOptions {
   not?: number | number[];

@@ -5,6 +5,8 @@ import { spawnSync } from "node:child_process";
 import { readFileSync, unlinkSync } from "node:fs";
 import { join } from "node:path";
 import { randomUUID } from "node:crypto";
+import { expect } from "vitest";
+import { createInstructionDecoder } from "../../src/decoder.js";
 
 export function makeCpu() {
   const memory = new Memory(new WebAssembly.Memory({ initial: 1024, maximum: 1024, shared: true }));
@@ -40,11 +42,52 @@ function assemble(asm: string) {
   }
 }
 
-export function runAsm(cpu: Cpu, asm: string) {
-  const bin = assemble(asm);
+export function runAsm(cpu: Cpu, asm: string | Uint8Array) {
+  const bin = typeof asm === "string" ? assemble(asm + "\nret") : asm;
 
   const mapping = new Uint8Array(cpu.memory.buffer, 1024, bin.byteLength);
   mapping.set(new Uint8Array(bin));
 
-  cpu.execute(1024);
+  return cpu.execute(1024);
+}
+
+const decodeInstruction = createInstructionDecoder();
+
+export function decodeToAsm(op: number) {
+  return decodeInstruction(op, (instruction, args) => instruction.asm(args));
+}
+
+type RegMemValues =
+  Partial<Record<keyof Cpu["registers"], bigint>> & {
+    mem64?: Partial<{ [address: number]: bigint }>
+  };
+
+export function runSingleInstructionTest({ asm, init, expected }: { asm: string, init: RegMemValues, expected: RegMemValues }) {
+  const bin = assemble(asm + "\nret");
+
+  expect(decodeToAsm(new Uint32Array(bin.buffer, bin.byteOffset, 1)[0]).replaceAll("\t", " ")).toEqual(asm);
+
+  const cpu = makeCpu();
+
+  for (const [reg, value] of Object.entries(init)) {
+    if (reg === "mem64") {
+      for (const [address, memValue] of Object.entries(value)) {
+        cpu.memory.set64(Number(address), memValue);
+      }
+    } else {
+      cpu.registers[reg as keyof Cpu["registers"]].value = value as bigint;
+    }
+  }
+
+  runAsm(cpu, bin);
+
+  for (const [reg, value] of Object.entries(expected)) {
+    if (reg === "mem64") {
+      for (const [address, memValue] of Object.entries(value)) {
+        expect(cpu.memory.get64(Number(address))).toEqual(memValue);
+      }
+    } else {
+      expect(cpu.registers[reg as keyof Cpu["registers"]].value).toEqual(value);
+    }
+  }
 }

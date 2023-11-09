@@ -52,7 +52,10 @@ export class Cpu {
   }
 
   execute(pc: number) {
-    this.compiler.compileFunction(pc)();
+    let nextPc = pc;
+    while (nextPc) {
+      nextPc = Number(this.compiler.getCompiledFunction(pc)());
+    }
   }
 
   importRegisters(builder: binaryen.Module) {
