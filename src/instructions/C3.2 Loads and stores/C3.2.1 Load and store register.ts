@@ -18,7 +18,7 @@ defineInstruction({
   name: "STR (Store register (immediate offset)) - writeback",
   pattern: [1, ["sf", 1], 1, 1, 1, 0, 0, 0, 0, 0, 0, ["imm9", 9], ["preindex", 1], 1, ["Rn", 5], ["Rt", 5]],
   asm({sf, imm9, preindex, Rn, Rt}) {
-    const reg = Rn === 31 ? (sf ? "sp" : "wsp") : `${sf ? "x" : "w"}${Rn}`;
+    const reg = Rn === 31 ? "sp" : `x${Rn}`;
     const imm = immToString(signExtend(imm9, 9) << (sf ? 3 : 2));
     return "str\t" + [
       `${sf ? "x" : "w"}${Rt}`,
@@ -26,8 +26,7 @@ defineInstruction({
     ].join(", ");
   },
   jit(ctx, {sf, imm9, preindex, Rn, Rt}) {
-    const scale = sf ? 3 : 2;
-    const offset = signExtend(imm9, 9) << scale;
+    const offset = signExtend(imm9, 9) << (sf ? 3 : 2);
 
     const address = ctx.builder.i32.wrap(Rn === 31 ? ctx.cpu.loadSp(ctx.builder) : ctx.builder.global.get(`x${Rn}`, binaryen.i64));
 
@@ -55,16 +54,15 @@ defineInstruction({
   name: "STR (Store register (immediate offset)) - not writeback",
   pattern: [1, ["sf", 1], 1, 1, 1, 0, 0, 1, 0, 0, ["imm12", 12], ["Rn", 5], ["Rt", 5]],
   asm({sf, imm12, Rn, Rt}) {
-    const reg = Rn === 31 ? (sf ? "sp" : "wsp") : `${sf ? "x" : "w"}${Rn}`;
-    const imm = immToString(signExtend(imm12, 12) << (sf ? 3 : 2));
+    const reg = Rn === 31 ? "sp" : `x${Rn}`;
+    const imm = immToString(imm12 << (sf ? 3 : 2));
     return "str\t" + [
       `${sf ? "x" : "w"}${Rt}`,
       imm12 === 0 ? `[${reg}]` : `[${reg}, ${imm}]`
     ].join(", ");
   },
   jit(ctx, {sf, imm12, Rn, Rt}) {
-    const scale = sf ? 3 : 2;
-    const offset = signExtend(imm12, 12) << scale;
+    const offset = imm12 << (sf ? 3 : 2);
 
     const address = ctx.builder.i32.wrap(Rn === 31 ? ctx.cpu.loadSp(ctx.builder) : ctx.builder.global.get(`x${Rn}`, binaryen.i64));
 
@@ -78,7 +76,7 @@ defineInstruction({
   name: "LDR (Load register (immediate offset)) - writeback",
   pattern: [1, ["sf", 1], 1, 1, 1, 0, 0, 0, 0, 1, 0, ["imm9", 9], ["preindex", 1], 1, ["Rn", 5], ["Rt", 5]],
   asm({sf, imm9, preindex, Rn, Rt}) {
-    const reg = Rn === 31 ? (sf ? "sp" : "wsp") : `${sf ? "x" : "w"}${Rn}`;
+    const reg = Rn === 31 ? "sp" : `x${Rn}`;
     const imm = immToString(signExtend(imm9, 9) << (sf ? 3 : 2));
     return "ldr\t" + [
       `${sf ? "x" : "w"}${Rt}`,
@@ -86,8 +84,7 @@ defineInstruction({
     ].join(", ");
   },
   jit(ctx, {sf, imm9, preindex, Rn, Rt}) {
-    const scale = sf ? 3 : 2;
-    const offset = signExtend(imm9, 9) << scale;
+    const offset = signExtend(imm9, 9) << (sf ? 3 : 2);
 
     const address = ctx.builder.i32.wrap(Rn === 31 ? ctx.cpu.loadSp(ctx.builder) : ctx.builder.global.get(`x${Rn}`, binaryen.i64));
 
@@ -115,16 +112,15 @@ defineInstruction({
   name: "LDR (Load register (immediate offset)) - not writeback",
   pattern: [1, ["sf", 1], 1, 1, 1, 0, 0, 1, 0, 1, ["imm12", 12], ["Rn", 5], ["Rt", 5]],
   asm({sf, imm12, Rn, Rt}) {
-    const reg = Rn === 31 ? (sf ? "sp" : "wsp") : `${sf ? "x" : "w"}${Rn}`;
-    const imm = immToString(signExtend(imm12, 12) << (sf ? 3 : 2));
+    const reg = Rn === 31 ? "sp" : `x${Rn}`;
+    const imm = immToString(imm12 << (sf ? 3 : 2));
     return "ldr\t" + [
       `${sf ? "x" : "w"}${Rt}`,
       imm12 === 0 ? `[${reg}]` : `[${reg}, ${imm}]`
     ].join(", ");
   },
   jit(ctx, {sf, imm12, Rn, Rt}) {
-    const scale = sf ? 3 : 2;
-    const offset = signExtend(imm12, 12) << scale;
+    const offset = imm12 << (sf ? 3 : 2);
 
     const address = ctx.builder.i32.wrap(Rn === 31 ? ctx.cpu.loadSp(ctx.builder) : ctx.builder.global.get(`x${Rn}`, binaryen.i64));
 

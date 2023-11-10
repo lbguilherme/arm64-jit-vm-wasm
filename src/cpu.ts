@@ -15,7 +15,7 @@ const registers32 = [
   "pstate.n", "pstate.z", "pstate.c", "pstate.v", "pstate.el", "pstate.sp",
 ] as const;
 
-type Registers = {
+export type CpuRegisters = {
   [K in (typeof registers64)[number] | (typeof registers32)[number]]: K extends (typeof registers64)[number] ? WebAssembly.Global<"i64"> : WebAssembly.Global<"i32">;
 };
 
@@ -34,7 +34,7 @@ function allocateRegisters() {
   const mod = new WebAssembly.Module(builder.emitBinary());
   const instance = new WebAssembly.Instance(mod);
 
-  return instance.exports as Registers;
+  return instance.exports as CpuRegisters;
 }
 
 export class Cpu {
@@ -48,6 +48,7 @@ export class Cpu {
     this.#offset = offset;
     this.compiler = new Compiler(this);
 
+    this.registers["pstate.z"].value = 1;
     this.registers["pstate.el"].value = 1;
   }
 

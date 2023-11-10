@@ -1,5 +1,5 @@
 import { Memory } from "../../src/system.js";
-import { Cpu } from "../../src/cpu.js";
+import { Cpu, CpuRegisters } from "../../src/cpu.js";
 import { tmpdir } from "node:os";
 import { spawnSync } from "node:child_process";
 import { readFileSync, unlinkSync } from "node:fs";
@@ -58,12 +58,13 @@ export function decodeToAsm(op: number) {
 }
 
 type RegMemValues =
-  Partial<Record<keyof Cpu["registers"], bigint>> & {
+  Partial<{[R in keyof CpuRegisters]: CpuRegisters[R] extends WebAssembly.Global<"i64"> ? bigint : number }> & {
     mem64?: Partial<{ [address: number]: bigint }>
+    mem32?: Partial<{ [address: number]: number }>
   };
 
 export function runSingleInstructionTest({ asm, init, expected }: { asm: string, init: RegMemValues, expected: RegMemValues }) {
-  const bin = assemble(asm + "\nret");
+  const bin = assemble(asm + "\nret\n");
 
   expect(decodeToAsm(new Uint32Array(bin.buffer, bin.byteOffset, 1)[0]).replaceAll("\t", " ")).toEqual(asm);
 
@@ -74,8 +75,12 @@ export function runSingleInstructionTest({ asm, init, expected }: { asm: string,
       for (const [address, memValue] of Object.entries(value)) {
         cpu.memory.set64(Number(address), memValue);
       }
+    } else if (reg === "mem32") {
+      for (const [address, memValue] of Object.entries(value)) {
+        cpu.memory.set32(Number(address), memValue);
+      }
     } else {
-      cpu.registers[reg as keyof Cpu["registers"]].value = value as bigint;
+      cpu.registers[reg as keyof CpuRegisters].value = value as any;
     }
   }
 
@@ -86,8 +91,12 @@ export function runSingleInstructionTest({ asm, init, expected }: { asm: string,
       for (const [address, memValue] of Object.entries(value)) {
         expect(cpu.memory.get64(Number(address))).toEqual(memValue);
       }
+    } else if (reg === "mem32") {
+      for (const [address, memValue] of Object.entries(value)) {
+        expect(cpu.memory.get32(Number(address))).toEqual(memValue);
+      }
     } else {
-      expect(cpu.registers[reg as keyof Cpu["registers"]].value).toEqual(value);
+      expect(cpu.registers[reg as keyof CpuRegisters].value).toEqual(value);
     }
   }
 }

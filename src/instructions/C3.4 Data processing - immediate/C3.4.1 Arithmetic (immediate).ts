@@ -60,7 +60,11 @@ defineInstruction({
     return [
       ...code,
       ...(Rd === 31 ? [] : [
-        ctx.builder.global.set(`x${Rd}`, ctx.builder.local.get(resultLocal, binaryen.i64))
+        ctx.builder.global.set(`x${Rd}`,
+          sf === 0
+            ? ctx.builder.i64.extend_s(ctx.builder.local.get(resultLocal, binaryen.i32))
+            : ctx.builder.local.get(resultLocal, binaryen.i64)
+        )
       ])
     ];
   }

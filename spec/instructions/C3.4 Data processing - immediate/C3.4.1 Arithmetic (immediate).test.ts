@@ -32,3 +32,47 @@ describe("add", () => {
     { asm: "add w0, w0, #1", init: { x0: (1n << 36n) + 1n }, expected: { x0: 2n } },
   ])('$asm | $init -> $expected', runSingleInstructionTest);
 });
+
+describe("adds", () => {
+  test.each([
+    { asm: "adds x0, x0, #1", init: { x0: 10n }, expected: { x0: 11n, "pstate.n": 0, "pstate.z": 0, "pstate.c": 0, "pstate.v": 0 } },
+    { asm: "adds x0, x0, #1", init: { x0: -1n }, expected: { x0: 0n, "pstate.n": 0, "pstate.z": 1, "pstate.c": 1, "pstate.v": 0 } },
+    { asm: "adds x0, x0, #0", init: { x0: -1n }, expected: { x0: -1n, "pstate.n": 1, "pstate.z": 0, "pstate.c": 0, "pstate.v": 0 } },
+    { asm: "adds w0, w0, #1", init: { x0: 10n }, expected: { x0: 11n, "pstate.n": 0, "pstate.z": 0, "pstate.c": 0, "pstate.v": 0 } },
+    { asm: "adds w0, w0, #1", init: { x0: 0xffffffffn }, expected: { x0: 0n, "pstate.n": 0, "pstate.z": 1, "pstate.c": 1, "pstate.v": 0 } },
+    { asm: "adds w0, w0, #0", init: { x0: 0xffffffffn }, expected: { x0: -1n, "pstate.n": 1, "pstate.z": 0, "pstate.c": 0, "pstate.v": 0 } },
+  ])('$asm | $init -> $expected', runSingleInstructionTest);
+});
+
+describe("cmn", () => {
+  test.each([
+    { asm: "cmn x0, #1", init: { x0: 10n }, expected: { x0: 10n, "pstate.n": 0, "pstate.z": 0, "pstate.c": 0, "pstate.v": 0 } },
+    { asm: "cmn x0, #1", init: { x0: -1n }, expected: { x0: -1n, "pstate.n": 0, "pstate.z": 1, "pstate.c": 1, "pstate.v": 0 } },
+    { asm: "cmn x0, #0", init: { x0: -1n }, expected: { x0: -1n, "pstate.n": 1, "pstate.z": 0, "pstate.c": 0, "pstate.v": 0 } },
+    { asm: "cmn w0, #1", init: { x0: 10n }, expected: { x0: 10n, "pstate.n": 0, "pstate.z": 0, "pstate.c": 0, "pstate.v": 0 } },
+    { asm: "cmn w0, #1", init: { x0: 0xffffffffn }, expected: { x0: 0xffffffffn, "pstate.n": 0, "pstate.z": 1, "pstate.c": 1, "pstate.v": 0 } },
+    { asm: "cmn w0, #0", init: { x0: 0xffffffffn }, expected: { x0: 0xffffffffn, "pstate.n": 1, "pstate.z": 0, "pstate.c": 0, "pstate.v": 0 } },
+  ])('$asm | $init -> $expected', runSingleInstructionTest);
+});
+
+describe("subs", () => {
+  test.each([
+    { asm: "subs x0, x0, #1", init: { x0: 10n }, expected: { x0: 9n, "pstate.n": 0, "pstate.z": 0, "pstate.c": 1, "pstate.v": 0 } },
+    { asm: "subs x0, x0, #1", init: { x0: 1n }, expected: { x0: 0n, "pstate.n": 0, "pstate.z": 1, "pstate.c": 1, "pstate.v": 0 } },
+    { asm: "subs x0, x0, #0", init: { x0: -1n }, expected: { x0: -1n, "pstate.n": 1, "pstate.z": 0, "pstate.c": 1, "pstate.v": 0 } },
+    { asm: "subs w0, w0, #1", init: { x0: 10n }, expected: { x0: 9n, "pstate.n": 0, "pstate.z": 0, "pstate.c": 1, "pstate.v": 0 } },
+    { asm: "subs w0, w0, #1", init: { x0: 1n }, expected: { x0: 0n, "pstate.n": 0, "pstate.z": 1, "pstate.c": 1, "pstate.v": 0 } },
+    { asm: "subs w0, w0, #0", init: { x0: 0xffffffffn }, expected: { x0: -1n, "pstate.n": 1, "pstate.z": 0, "pstate.c": 1, "pstate.v": 0 } },
+  ])('$asm | $init -> $expected', runSingleInstructionTest);
+});
+
+describe("cmp", () => {
+  test.each([
+    { asm: "cmp x0, #1", init: { x0: 10n }, expected: { x0: 10n, "pstate.n": 0, "pstate.z": 0, "pstate.c": 1, "pstate.v": 0 } },
+    { asm: "cmp x0, #1", init: { x0: 1n }, expected: { x0: 1n, "pstate.n": 0, "pstate.z": 1, "pstate.c": 1, "pstate.v": 0 } },
+    { asm: "cmp x0, #0", init: { x0: -1n }, expected: { x0: -1n, "pstate.n": 1, "pstate.z": 0, "pstate.c": 1, "pstate.v": 0 } },
+    { asm: "cmp w0, #1", init: { x0: 10n }, expected: { x0: 10n, "pstate.n": 0, "pstate.z": 0, "pstate.c": 1, "pstate.v": 0 } },
+    { asm: "cmp w0, #1", init: { x0: 1n }, expected: { x0: 1n, "pstate.n": 0, "pstate.z": 1, "pstate.c": 1, "pstate.v": 0 } },
+    { asm: "cmp w0, #0", init: { x0: 0xffffffffn }, expected: { x0: 0xffffffffn, "pstate.n": 1, "pstate.z": 0, "pstate.c": 1, "pstate.v": 0 } },
+  ])('$asm | $init -> $expected', runSingleInstructionTest);
+});
